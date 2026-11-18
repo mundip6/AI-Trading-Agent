@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trading-agent"
+version = "0.1.0"
+description = "LLM trading agent for demo accounts: crypto, stocks and ETFs, gold on MetaTrader 5"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "ccxt>=4.0",
+    "pandas>=2.1",
+    "numpy>=1.26",
+    "requests>=2.31",
+    "langchain>=1.0",
+    "langchain-anthropic>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+dashboard = ["streamlit>=1.46", "plotly>=6", "psutil>=5.9"]
+# Stocks and ETFs. curl_cffi is held below 0.17 because newer releases need a cffi
+# version that ccxt's pin (cffi==2.0.0) excludes; pip reports a mismatch with
+# yfinance's stated requirement, but the combination works.
+stocks = ["yfinance>=1.0", "curl_cffi<0.17"]
+# Other LLM providers: pip install -e ".[openai]" etc.
+openai = ["langchain-openai"]
+google = ["langchain-google-genai"]
+ollama = ["langchain-ollama"]
+# Gold, forex and indices on a MetaTrader 5 demo account (Windows only; needs the terminal installed).
+mt5 = ["MetaTrader5>=5.0.45"]
+
+[project.scripts]
+trader = "trading_agent.cli:main"
+
+# Windowless launcher for the desktop app (needs the "dashboard" extra).
+[project.gui-scripts]
+trading-agent = "trading_agent.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

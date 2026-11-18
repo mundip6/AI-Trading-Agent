@@ -1,0 +1,80 @@
+# Gold demo account at an MT5 broker (PU Prime): short-term, long and short.
+# Needs: pip install -e ".[mt5]", and MetaTrader 5 running on this PC, logged in to a DEMO account.
+# Check everything with: trader --config config.gold.toml mt5 check
+# The agent refuses to trade if the terminal is logged in to a real account.
+
+[data]
+exchange = "mt5"            # candles and prices come from the local MetaTrader 5 terminal
+db_path = "data/market.sqlite"
+symbols = ["XAUUSD.s"]      # the exact name shown in MetaTrader's Market Watch
+timeframes = ["15m"]
+since = "2026-06-01"
+
+[backtest]
+initial_cash = 10000.0
+fee_rate = 0.0
+slippage = 0.0001           # stands in for the spread
+risk_per_trade = 0.005
+max_position_pct = 1.0
+
+[risk]
+risk_per_trade = 0.005      # share of the account lost when a stop is hit (0.5%)
+max_open_positions = 2
+max_daily_loss = 0.02       # no new entries for the rest of the UTC day after losing 2%
+
+[paper]
+broker = "mt5"              # orders go to the demo account in MetaTrader 5
+db_path = "data/paper_gold.sqlite"
+decider = "llm"
+timeframe = "15m"           # one decision per closed 15-minute candle, about 92 a day
+poll_seconds = 10
+
+[mt5]
+# login = 12345678          # optional: refuse to trade on any other account number
+max_lots = 1.0              # hard cap on one position (1 lot of gold = 100 oz)
+max_margin_pct = 0.5        # a new position may use at most half of the free margin
+max_spread_to_stop = 0.15   # skip an entry when the spread is more than 15% of the stop distance
+min_stop_atr = 1.0          # the agent's stop is kept between these ATR multiples
+max_stop_atr = 4.0
+min_take_profit_r = 1.0     # the agent's target is kept between these multiples of the stop distance
+max_take_profit_r = 4.0
+no_entry_hours_before_weekend = 2.0   # no new position in the last 2 hours before the weekend close
+close_before_weekend_minutes = 30     # open positions are closed 30 minutes before it; 0 = keep them
+
+[llm]
+provider = "anthropic"
+model = "claude-opus-5-5"
+structured_output = "json_schema"
+min_confidence = 0.6
+
+[llm.options]
+max_tokens = 16000
+
+[alerts]
+telegram = true
+events = ["BUY", "SELL", "CLOSE", "STOP", "TP", "REJECTED", "ERROR", "NEWS"]
+news_every_hours = 4       # the agent's news briefing per symbol; 0 = never
+news_min_hours = 1         # sooner only when its view changes, at most this often
+error_cooldown_minutes = 60
+daily_summary = true
+
+[copytrade]
+enabled = false             # the Hyperliquid feed covers crypto only
+
+[news]
+enabled = true              # gold-futures headlines from Yahoo Finance
+max_headlines = 6
+max_age_hours = 24
+cache_minutes = 15
+earnings_blackout_days = 0
+# Wider news the agent reads on every decision: each line is a Google News search.
+topics = [
+    "\"gold prices\" OR \"gold futures\" OR bullion",
+    "war OR ceasefire OR sanctions OR \"missile strike\" OR invasion",
+    "Federal Reserve OR inflation OR \"interest rates\" OR \"US dollar\"",
+]
+topic_headlines = 4         # headlines kept per topic
+# Scheduled economic releases (inflation, jobs, Fed) for these currencies.
+calendar = ["USD"]
+calendar_hours_ahead = 24
+event_blackout_minutes = 15 # no new entry within 15 minutes of a high-impact release

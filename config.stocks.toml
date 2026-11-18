@@ -1,0 +1,74 @@
+# Stocks and ETFs demo account (daily candles from Yahoo Finance).
+# Needs: pip install -e ".[stocks]"
+# Run with: trader --config config.stocks.toml <command>
+
+[data]
+exchange = "yahoo"
+db_path = "data/market.sqlite"
+# Yahoo tickers. All symbols of one account must trade in the same currency:
+# US listings (USD) here; for EU-listed UCITS ETFs use e.g. "VUAA.DE", "EUNL.DE" (EUR)
+# in a separate config with its own [paper].db_path.
+symbols = ["SPY", "QQQ", "IWM", "GLD", "AAPL", "MSFT", "NVDA"]
+timeframes = ["1d"]
+since = "2015-01-01"
+
+[backtest]
+initial_cash = 10000.0
+fee_rate = 0.0005         # 0.05% per side
+slippage = 0.0005
+risk_per_trade = 0.01
+max_position_pct = 1.0
+
+[risk]
+risk_per_trade = 0.01      # fraction of equity lost if the stop is hit
+max_position_pct = 0.25    # one position, as a fraction of equity
+max_open_positions = 4
+max_total_exposure = 0.95
+max_daily_loss = 0.03
+min_order_value = 10.0
+
+[paper]
+broker = "paper"           # internal simulator; fractional shares are assumed
+db_path = "data/paper_stocks.sqlite"
+initial_cash = 10000.0
+# Who decides: "strategy" = the rule strategy below, "llm" = the [llm] agent.
+decider = "llm"
+strategy = "ema_cross"
+timeframe = "1d"
+poll_seconds = 300         # stops are checked this often while the market is open
+fee_rate = 0.0005
+slippage = 0.0005
+
+[llm]
+provider = "anthropic"
+model = "claude-opus-5-5"
+structured_output = "json_schema"
+min_confidence = 0.6
+
+[llm.options]
+max_tokens = 16000
+
+[alerts]
+telegram = true
+events = ["BUY", "SELL", "STOP", "REJECTED", "ERROR", "NEWS"]
+news_every_hours = 4       # the agent's news briefing per symbol; 0 = never
+news_min_hours = 1         # sooner only when its view changes, at most this often
+error_cooldown_minutes = 60
+daily_summary = true
+
+[copytrade]
+enabled = false            # the Hyperliquid feed covers crypto only
+
+[news]
+# Recent headlines and the next earnings date (Yahoo Finance), shown to the LLM agent.
+# Needs: pip install -e ".[stocks]"
+enabled = true
+max_headlines = 8
+max_age_hours = 72
+cache_minutes = 30
+earnings_blackout_days = 2    # no new entry this close to an earnings report; 0 = no rule
+company_news = true           # also search Google News for each company by its name
+topic_headlines = 5           # headlines kept per search
+# Market-wide news shown with every stock: each line is a Google News search.
+topics = ["stock market OR Wall Street", "Federal Reserve OR inflation OR tariffs"]
+calendar = ["USD"]            # scheduled US economic releases in the next day

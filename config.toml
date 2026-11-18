@@ -1,0 +1,95 @@
+[data]
+# Any exchange id supported by ccxt (binance, bybit, kraken, okx, ...).
+# Only public market data is used in phase 1, so no API key is needed.
+exchange = "binance"
+db_path = "data/market.sqlite"
+symbols = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+timeframes = ["4h", "1d"]
+since = "2021-01-01"
+
+[backtest]
+initial_cash = 10000.0
+fee_rate = 0.001          # 0.1% per side
+slippage = 0.0005         # 0.05% worse than the open price on every fill
+risk_per_trade = 0.01     # fraction of equity lost if the stop is hit
+max_position_pct = 1.0    # cap on position value as a fraction of equity
+
+[risk]
+# Hard limits applied to every entry in demo (and later live) trading.
+risk_per_trade = 0.01      # fraction of equity lost if the stop is hit
+max_position_pct = 0.30    # one position, as a fraction of equity
+max_open_positions = 3
+max_total_exposure = 0.90  # all positions together, as a fraction of equity
+max_daily_loss = 0.03      # no new entries once the day is down this much
+min_order_value = 10.0
+
+[paper]
+# "paper" = internal simulator (live prices, pretend money).
+# "binance_testnet" = Binance demo account; needs BINANCE_TESTNET_API_KEY / _API_SECRET.
+broker = "paper"
+db_path = "data/paper.sqlite"
+initial_cash = 10000.0     # simulator only
+# Who decides: "strategy" = the rule strategy below, "llm" = the [llm] agent.
+decider = "strategy"
+strategy = "ema_cross"
+timeframe = "4h"
+poll_seconds = 60          # how often stops are checked
+fee_rate = 0.001           # simulator only
+slippage = 0.0005          # simulator only
+# symbols = ["BTC/USDT"]   # default: [data].symbols
+
+# [paper.params]           # strategy parameter overrides
+# fast = 20
+
+[llm]
+# The decision agent runs on LangChain, so any supported provider works.
+# API keys are read from the environment or from a .env file next to this one.
+#
+#   provider        model example        install                      key
+#   anthropic       claude-opus-5-5      (included)                   ANTHROPIC_API_KEY
+#   openai          gpt-...              pip install -e ".[openai]"   OPENAI_API_KEY
+#   google_genai    gemini-...           pip install -e ".[google]"   GOOGLE_API_KEY
+#   ollama          llama3.1, qwen3 ...  pip install -e ".[ollama]"   none (local)
+provider = "anthropic"
+model = "claude-opus-5-5"
+# How the model returns its decision: a LangChain structured-output method
+# ("json_schema", "function_calling", "json_mode") or "prompt" to ask for JSON in
+# plain text - use "prompt" for local models without structured-output support.
+structured_output = "json_schema"
+min_confidence = 0.6       # buys below this confidence are not executed
+
+[llm.options]              # passed unchanged to the chat model; provider-specific
+max_tokens = 16000
+
+[alerts]
+# Telegram alerts from the demo-trading loop. Create a bot with @BotFather, then set
+# TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env and check with `trader alerts test`.
+telegram = true
+events = ["BUY", "SELL", "STOP", "REJECTED", "ERROR"]
+error_cooldown_minutes = 60   # the same error is not repeated more often than this
+daily_summary = true          # one message per day (UTC) with equity and open positions
+
+[copytrade]
+# Follow consistently profitable traders on Hyperliquid (public on-chain data, no account
+# needed) and give the LLM agent their positioning as one more input.
+#   trader copy rank     build / rebuild the followed list (run weekly or so)
+#   trader copy show     who is followed and how they are positioned
+enabled = false   # true = include it in the LLM agent's snapshot
+db_path = "data/copytrade.sqlite"
+followed = 10
+candidates = 60               # examined in detail when ranking
+min_account_value = 100000.0
+max_monthly_turnover = 50.0   # monthly volume / account value; above this = market maker
+min_history_days = 90
+max_drawdown = 0.5
+refresh_minutes = 30          # positions are re-read when older than this
+max_age_minutes = 240         # the signal is ignored when older than this
+
+[news]
+# Recent headlines and the next earnings date (Yahoo Finance), shown to the LLM agent.
+# Needs: pip install -e ".[stocks]"
+enabled = false
+max_headlines = 8
+max_age_hours = 72
+cache_minutes = 30
+earnings_blackout_days = 2    # no new entry this close to an earnings report; 0 = no rule
