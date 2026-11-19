@@ -313,3 +313,5 @@ or in the daily break; the log says when it pauses and resumes). It opens nothin
 ## License
 
 MIT: see [LICENSE](LICENSE). Use at your own risk; this software trades demo accounts and gives no financial advice.
+
+Issues and pull requests are welcome.
